@@ -55,7 +55,7 @@ if __name__ == '__main__':
     #print('imputed features:', imputed_features)
 
     # Divide dataset into training and test data
-    features_train, features_test, labels_train, labels_test = train_test_split(imputed_features, labels, test_size=0.2)
+    features_train, features_test, labels_train, labels_test = train_test_split(imputed_features, labels, test_size=0.2, random_state=0)
     #print(features_train.shape)
     #print(features_train)
 
@@ -70,11 +70,11 @@ if __name__ == '__main__':
     sel = SelectKBest(f_classif, k=30).fit(features_train_scaled, labels_train)
     #print('feat sel score:', sel.scores_)
     features_train_transformed = sel.transform(features_train_scaled)
-    #print(features_train_transformed.shape)
-    #print(features_train_transformed)
+    features_train_transformed = pd.DataFrame(features_train_transformed, columns=features_train.columns[sel.get_support()])
+    #print(features_train_transformed, 'shape:', features_train_transformed.shape)
 
     # Train model with algorithm
-    clf = RandomForestClassifier()
+    clf = RandomForestClassifier(random_state=0)
 #    clf.fit(features_train_scaled, labels_train)
 #    y_pred = clf.predict(features_test_scaled)
 #    print('accuracy w/ all features:', accuracy_score(labels_test, y_pred))
@@ -93,44 +93,33 @@ if __name__ == '__main__':
     #0.6889763779527559 k=31
     #0.55249343832021 k=32
 
-    # plotting feature importances
-    #importances = clf.feature_importances_
-    #indices = np.argsort(importances)
-#    plt.figure(figsize=(10, 15))
-#    plt.title('Feature Importances')
-#    plt.barh(range(len(indices)), importances[indices], color='b', align='center')
-#    plt.yticks(range(len(indices)), [features[i] for i in indices])
-#    plt.xlabel('Relative Importance')
-#    plt.show()
-
     importances = clf.feature_importances_
+    #print('importances:', importances)
     std = np.std([tree.feature_importances_ for tree in clf.estimators_],
                  axis=0)
     indices = np.argsort(importances)[::-1]
 
-    # Print the feature ranking
-    #print("Feature ranking:")
-
-    #for f in range(features_train_transformed.shape[1]):
-    #    print("%d. feature %d (%f)" % (f + 1, indices[f], importances[indices[f]]))
-
-    # Plot the impurity-based feature importances of the forest
+    # plotting feature importance
     plt.figure()
-    plt.title("Feature importances")
-    #plt.bar(range(features_train_transformed.shape[1]), importances[indices],
-            #color="b", yerr=std[indices], align="center")
-    plt.barh(range(len(indices)), importances[indices], color='b', align='center')
-    #plt.yticks(range(features_train_transformed.shape[1]), indices)
-    plt.yticks(range(len(indices)), [features_train_transformed[i] for i in indices])
+    plt.title("Feature Importance")
+    plt.barh(range(features_train_transformed.shape[1]), importances[indices], color="b", yerr=std[indices], align="center")
+    plt.yticks(range(features_train_transformed.shape[1]), features_train_transformed.columns)
     #plt.xlim([-1, features_train_transformed.shape[1]])
     plt.xlabel('Relative Importance')
-    #plt.show()
+    plt.show()
 
-    # Plot feature importance
-#    feature_importance_df = pd.DataFrame({'feature': features_train.columns[sel.get_support()], 'importance': clf.feature_importances_}).sort_values('importance', ascending=False)
-
- #   print(feature_importance_df)
-
+    # Print the feature ranking
+    feature_importance_df = pd.DataFrame({'feature': features_train.columns[sel.get_support()], 'importance': clf.feature_importances_}).sort_values('importance', ascending=False)
+    print(feature_importance_df)
 
 
+
+#TODO:
+# []Explore RFE
+# []Review & implement cross validation
+# [x]Add column names in importance graph
+# [x]Learn the basics of plt
+# []Review and implement confusion matrix (evaluation metrics)
+# []Decide whether to use the dataset
+# []Draft the capstone topic approval form
 
