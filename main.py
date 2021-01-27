@@ -5,7 +5,7 @@ from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.feature_selection import SelectKBest, f_classif
+from sklearn.feature_selection import SelectKBest, f_classif, RFE
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import SimpleImputer
 from sklearn.impute import IterativeImputer
@@ -15,11 +15,6 @@ import numpy as np
 if __name__ == '__main__':
     stocks = pd.read_csv('data/2014_Financial_Data.csv')
 
-    corr = stocks.corr()
-    #print(corr)
-    mask = np.triu(np.ones_like(corr, dtype=np.bool))
-    cmap = sns.diverging_palette(230, 20, as_cmap=True)
-    #sns.heatmap(corr, mask=mask, cmap=cmap)
 
     # Clean up data
     for i, row in stocks.iterrows():
@@ -67,17 +62,29 @@ if __name__ == '__main__':
     #print('scaled data std:', features_train_scaled.std(axis=0))
 
     # Do feature elimination
-    sel = SelectKBest(f_classif, k=30).fit(features_train_scaled, labels_train)
+    sel = SelectKBest(f_classif, k=10).fit(features_train_scaled, labels_train)
     #print('feat sel score:', sel.scores_)
     features_train_transformed = sel.transform(features_train_scaled)
     features_train_transformed = pd.DataFrame(features_train_transformed, columns=features_train.columns[sel.get_support()])
     #print(features_train_transformed, 'shape:', features_train_transformed.shape)
+
+    # Make corr heatmap b/w features
+    corr = features_train_transformed.corr()
+    print(corr)
+    mask = np.triu(np.ones_like(corr, dtype=np.bool))
+    cmap = sns.diverging_palette(230, 20, as_cmap=True)
+    sns.heatmap(corr, mask=mask, cmap=cmap)
+
 
     # Train model with algorithm
     clf = RandomForestClassifier(random_state=0)
 #    clf.fit(features_train_scaled, labels_train)
 #    y_pred = clf.predict(features_test_scaled)
 #    print('accuracy w/ all features:', accuracy_score(labels_test, y_pred))
+
+    # RFE
+    #sel2 = RFE(clf, n_features_to_select=10)
+    #features_train_transformed = sel2.fit_transform(features_train_scaled, labels_train)
 
     clf.fit(features_train_transformed, labels_train)
     features_test_transformed = sel.transform(features_test_scaled)
@@ -115,7 +122,8 @@ if __name__ == '__main__':
 
 
 #TODO:
-# []Explore RFE
+# [x]Make a correlation graph between selected features
+# [x]Explore RFE
 # []Review & implement cross validation
 # [x]Add column names in importance graph
 # [x]Learn the basics of plt
