@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from pandas.tests.frame.methods.test_sort_values import ascending
 from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, KFold
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_selection import SelectKBest, f_classif, RFE
 from sklearn.experimental import enable_iterative_imputer
@@ -49,8 +49,20 @@ if __name__ == '__main__':
     pd.DataFrame(imputed_features, columns=imputed_features.columns).to_csv(path_or_buf='data/2014_Financial_Data_Imputed.csv', index=False)
     #print('imputed features:', imputed_features)
 
+
     # Divide dataset into training and test data
-    features_train, features_test, labels_train, labels_test = train_test_split(imputed_features, labels, test_size=0.2, random_state=0)
+    kf = KFold(shuffle=True)
+    for train_indices, test_indices in kf.split(imputed_features, labels):
+        features_train = [imputed_features.iloc[i] for i in train_indices]
+        features_test = [imputed_features.iloc[i] for i in test_indices]
+        labels_train = [labels.iloc[i] for i in train_indices]
+        labels_test = [labels.iloc[i] for i in test_indices]
+        #print(train_indices)
+        #print(labels_train)
+        #print(labels_test)
+    #features_train, features_test, labels_train, labels_test = train_test_split(imputed_features, labels, test_size=0.2, random_state=0)
+    features_train = pd.DataFrame(features_train)
+    features_test = pd.DataFrame(features_test)
     #print(features_train.shape)
     #print(features_train)
 
@@ -70,7 +82,7 @@ if __name__ == '__main__':
 
     # Make corr heatmap b/w features
     corr = features_train_transformed.corr()
-    print(corr)
+    #print(corr)
     mask = np.triu(np.ones_like(corr, dtype=np.bool))
     cmap = sns.diverging_palette(230, 20, as_cmap=True)
     sns.heatmap(corr, mask=mask, cmap=cmap)
@@ -124,7 +136,7 @@ if __name__ == '__main__':
 #TODO:
 # [x]Make a correlation graph between selected features
 # [x]Explore RFE
-# []Review & implement cross validation
+# [x]Review & implement cross validation
 # [x]Add column names in importance graph
 # [x]Learn the basics of plt
 # []Review and implement confusion matrix (evaluation metrics)
