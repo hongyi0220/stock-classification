@@ -122,6 +122,14 @@ if __name__ == '__main__':
     cell_labels = np.asarray(cell_labels).reshape(2, 2)
     sns.heatmap(cf_matrix, annot=cell_labels, fmt='', cmap='Blues')
 
+    # Make summary stats for the cf matrix
+    accuracy = cf_matrix.trace() / float(np.sum(cf_matrix))
+    precision = cf_matrix[1, 1] / sum(cf_matrix[:, 1])
+    recall = cf_matrix[1, 1] / sum(cf_matrix[1, :])
+    f1score = 2*precision*recall / (precision + recall)
+    sum_stats = "\nAccuracy:{:0.2f}\nRecall={:0.2f}\nPrecision={:0.2f}\nF1 Score={:0.2f}".format(accuracy, recall, precision, f1score)
+    plt.xlabel(sum_stats)
+
     # plotting feature importance
     importances = clf.feature_importances_
     #print('importances:', importances)
@@ -150,7 +158,7 @@ if __name__ == '__main__':
 # [x]Add column names in importance graph
 # [x]Learn the basics of plt
 # [x]Review and implement confusion matrix (evaluation metrics)
-# []Create summary statistics of accuracy, precision, recall, f-score
+# [x]Create summary statistics of accuracy, precision, recall, f-score
 # [x]Decide whether to use the dataset
 # []Draft the capstone topic approval form
 
