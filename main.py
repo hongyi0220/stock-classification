@@ -1,7 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 from pandas.tests.frame.methods.test_sort_values import ascending
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, confusion_matrix
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split, KFold
 from sklearn.ensemble import RandomForestClassifier
@@ -112,13 +112,23 @@ if __name__ == '__main__':
     #0.6889763779527559 k=31
     #0.55249343832021 k=32
 
+    # Make confusion matrix to track evaluation metrics
+    cf_matrix = confusion_matrix(labels_test, y_pred2)
+    #print(cf_matrix)
+    cell_names = ['True Neg', 'False Pos', 'False Neg', 'True Pos']
+    cell_counts = ["{0:0f}".format(v) for v in cf_matrix.flatten()]
+    cell_percents = ["{0:.2%}".format(v) for v in cf_matrix.flatten() / np.sum(cf_matrix)]
+    cell_labels = [f"{v1}\n{v2}\n{v3}" for v1, v2, v3 in zip(cell_names, cell_counts, cell_percents)]
+    cell_labels = np.asarray(cell_labels).reshape(2, 2)
+    sns.heatmap(cf_matrix, annot=cell_labels, fmt='', cmap='Blues')
+
+    # plotting feature importance
     importances = clf.feature_importances_
     #print('importances:', importances)
     std = np.std([tree.feature_importances_ for tree in clf.estimators_],
                  axis=0)
     indices = np.argsort(importances)[::-1]
 
-    # plotting feature importance
     plt.figure()
     plt.title("Feature Importance")
     plt.barh(range(features_train_transformed.shape[1]), importances[indices], color="b", yerr=std[indices], align="center")
@@ -139,7 +149,8 @@ if __name__ == '__main__':
 # [x]Review & implement cross validation
 # [x]Add column names in importance graph
 # [x]Learn the basics of plt
-# []Review and implement confusion matrix (evaluation metrics)
-# []Decide whether to use the dataset
+# [x]Review and implement confusion matrix (evaluation metrics)
+# []Create summary statistics of accuracy, precision, recall, f-score
+# [x]Decide whether to use the dataset
 # []Draft the capstone topic approval form
 
