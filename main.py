@@ -75,9 +75,11 @@ if __name__ == '__main__':
         #print(labels_train)
         #print(labels_test)
     features_train, features_test, labels_train, labels_test = train_test_split(imputed_features, labels, test_size=0.2, random_state=0)
-    features_train = pd.DataFrame(features_train)
-    features_test = pd.DataFrame(features_test)
-    #print(features_train.shape)
+    #features_train = features_train.iloc[:, :]
+    #features_test = features_test.iloc[:, :]
+    #features_train = pd.DataFrame(features_train)
+    #features_test = pd.DataFrame(features_test)
+    print('FEATURE_TEST INDEX:', features_test.index)
     #print(features_train)
 
     # Standardize data
@@ -94,15 +96,16 @@ if __name__ == '__main__':
     #features_train_transformed = sel.transform(features_train_scaled)
     features_train_scaled = pd.DataFrame(features_train_scaled)
     features_test_scaled = pd.DataFrame(features_test_scaled)
+    print('FEATURE_TEST INDEX AFTER SCALING AND DATAFRAMING:', features_test_scaled.index)
     #print(features_train_transformed, 'shape:', features_train_transformed.shape)
 
 
     # Make corr heatmap b/w features
-    corr = features_train_scaled.corr()
+    #corr = features_train_scaled.corr()
     #print(corr)
-    mask = np.triu(np.ones_like(corr, dtype=np.bool))
-    cmap = sns.diverging_palette(230, 20, as_cmap=True)
-    sns.heatmap(corr, mask=mask, cmap=cmap)
+    #mask = np.triu(np.ones_like(corr, dtype=np.bool))
+    #cmap = sns.diverging_palette(230, 20, as_cmap=True)
+    #sns.heatmap(corr, mask=mask, cmap=cmap)
 
 
     # Train model with algorithm
@@ -139,27 +142,29 @@ if __name__ == '__main__':
 
     # Get 2019 price variations ONLY for the stocks in testing split
     init_invest_amount = 1000
-    print(features_test_scaled.index.values)
-    price_var_test = price_var.loc[features_test_scaled.index.values]
+    #print(features_test_scaled.index.values)
+    price_var_test = price_var.loc[features_test.index.values]
     price_var_test = pd.DataFrame(price_var_test)
-    print(price_var_test.shape)
-    pl_df = pd.DataFrame(labels_test, index=features_test_scaled.index.values,
-                       columns=['buy/skip'])  # first column is the true target (buy / skip)
+    #print(price_var_test.shape)
+    #print('LABELS_TEST:', labels_test)
+    pl_df = pd.DataFrame(np.array(labels_test), index=features_test.index.values,
+                       columns=['class'])  # first column is the true class (buy, 1/ skip, 0)
     y_pred = clf.predict(features_test_scaled)
     #print('ypred:', y_pred)
     print('buy_pred/y_pred:', len(list(y for y in y_pred if y == 1)), '/', len(y_pred))
     #print(len(list(pred in y_pred for pred == 1)))
     buy_amount = init_invest_amount / len(list(y for y in y_pred if y == 1))
-    pl_df['rf'] = y_pred
+    pl_df['pred'] = y_pred
 
-    pl_df['init invest amount rf'] = pl_df['rf'] * buy_amount
-    pl_df['price var rf'] = (price_var_test['price var'].values / 100) * pl_df['init invest amount rf']
-    pl_df['final val rf'] = pl_df['init invest amount rf'] + pl_df['price var rf']
+    pl_df['init invest amount'] = pl_df['pred'] * buy_amount
+    pl_df['price var %'] = price_var_test['price var']
+    pl_df['price var $'] = (price_var_test['price var'].values / 100) * pl_df['init invest amount']
+    pl_df['final val'] = pl_df['init invest amount'] + pl_df['price var $']
     print(pl_df)
     #y_pred = rgr.predict(features_test_scaled)
 
-    total_init_value_rf = pl_df['init invest amount rf'].sum()
-    total_final_value_rf = pl_df['final val rf'].sum()
+    total_init_value_rf = pl_df['init invest amount'].sum()
+    total_final_value_rf = pl_df['final val'].sum()
     net_gain_rf = total_final_value_rf - total_init_value_rf
     percent_gain_rf = (net_gain_rf / total_init_value_rf) * 100
     sum_df = pd.DataFrame([total_init_value_rf, total_final_value_rf, percent_gain_rf], index=['init val', 'final val', 'roi'], columns=['rf'])
@@ -205,7 +210,7 @@ if __name__ == '__main__':
     plt.xlabel(sum_stats)
 
     # Classification report
-    print(classification_report(labels_test, clf.predict(features_test_scaled), target_names=['Ignore', 'Buy']))
+    print(classification_report(labels_test, clf.predict(features_test_scaled), target_names=['Skip', 'Buy']))
 
    # plotting feature importance
     importances = clf.feature_importances_
@@ -237,10 +242,11 @@ if __name__ == '__main__':
 # [x]Review and implement confusion matrix (evaluation metrics)
 # [x]Create summary statistics of accuracy, precision, recall, f-score
 # [x]Decide whether to use the dataset
-# []Draft the capstone topic approval form
 # [x]Calculate price var based on a fixed amount investment divided equally into winning picks
+# [x]Investigate class, price var % mismatch in pl_df (index f-d up during transformation, dataframing?)
+# [x]Fix buy/skip column of pl_df
 # []Try using aggregated dataset from year 2014-2018 and see if model improves
-# []Fine tune algorithm to boost ROI and beat S&P500(y2019 ~28%)
-# []Experiment with other data to see your evaluation criteria holds
+# []Fine tune algorithm(tune parameters, missing data threshold) to boost ROI and beat S&P500(y2019 ~28%)
 # []Get Names of the true positive stocks
+# []Draft the capstone topic approval form
 
