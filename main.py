@@ -1,5 +1,4 @@
 from functools import reduce
-
 import joblib
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -8,11 +7,7 @@ from sklearn.metrics import accuracy_score, confusion_matrix, classification_rep
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split, KFold, GridSearchCV
 from sklearn.ensemble import RandomForestClassifier
-from sklearn import linear_model
-from sklearn.feature_selection import SelectKBest, f_classif, RFE
-from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import SimpleImputer
-from sklearn.impute import IterativeImputer
 import seaborn as sns
 import numpy as np
 
@@ -55,7 +50,9 @@ if __name__ == '__main__':
     #labels = stocks_data.pop(stocks_data.columns[stocks_data.columns.str.contains('2015 price var', case=False)][0])
     #print(labels)
     #print(stocks_data)
-    threshold_percent = 33
+
+    # Do feature elimination
+    threshold_percent = 8
     threshold = (threshold_percent / 100) * stocks_data.shape[0]
     stocks_data = stocks_data.loc[:, stocks_data.isin([0]).sum() <= threshold]
     stocks_data = stocks_data.loc[:, stocks_data.isna().sum() <= threshold]
@@ -92,22 +89,6 @@ if __name__ == '__main__':
 
 
     # Divide dataset into training and test data
-#    kf = KFold(shuffle=True)
-#    for train_indices, test_indices in kf.split(imputed_features, labels):
-#        features_train = [imputed_features.iloc[i] for i in train_indices]
-#        features_test = [imputed_features.iloc[i] for i in test_indices]
-#        labels_train = [labels.iloc[i] for i in train_indices]
-#        labels_test = [labels.iloc[i] for i in test_indices]
-        #print(train_indices)
-        #print(labels_train)
-        #print(labels_test)
-    #features_train, features_test, labels_train, labels_test = train_test_split(imputed_features, labels, test_size=0.2, random_state=0)
-    #features_train = features_train.iloc[:, :]
-    #features_test = features_test.iloc[:, :]
-    #features_train = pd.DataFrame(features_train)
-    #features_test = pd.DataFrame(features_test)
-    #print('FEATURE_TEST INDEX:', features_test.index)
-    #print(features_train)
     features_train = imputed_features
     labels_train = labels
 
@@ -120,10 +101,6 @@ if __name__ == '__main__':
     #print('scaled data mean:', features_train_scaled.mean(axis=0))
     #print('scaled data std:', features_train_scaled.std(axis=0))
 
-    # Do feature elimination
-    #sel = SelectKBest(f_classif, k=10).fit(features_train_scaled, labels_train)
-    #print('feat sel score:', sel.scores_)
-    #features_train_transformed = sel.transform(features_train_scaled)
     features_train_scaled = pd.DataFrame(features_train_scaled)
     #features_test_scaled = pd.DataFrame(features_test_scaled)
     features_test_pred_meth = pd.DataFrame(features_test_pred_meth)
@@ -132,31 +109,23 @@ if __name__ == '__main__':
 
 
     # Make corr heatmap b/w features
-    #corr = features_train_scaled.corr()
-    #print(corr)
-    #mask = np.triu(np.ones_like(corr, dtype=np.bool))
-    #cmap = sns.diverging_palette(230, 20, as_cmap=True)
-    #sns.heatmap(corr, mask=mask, cmap=cmap)
+    corr = features_train_scaled.corr()
+    print(corr)
+    mask = np.triu(np.ones_like(corr, dtype=np.bool))
+    cmap = sns.diverging_palette(230, 20, as_cmap=True)
+    sns.heatmap(corr, mask=mask, cmap=cmap)
+    plt.show()
 
     # Train model with algorithm
     #clf = RandomForestClassifier(random_state=0, criterion='entropy', max_depth=6, max_features='auto', n_estimators=128)
-    #rgr = linear_model.LinearRegression()
-    #rgr.fit(features_train_scaled, labels_train)
-
-    # RFE
-    #sel2 = RFE(rgr, n_features_to_select=10)
-    #features_train_scaled = sel2.fit_transform(features_train_scaled, labels_train)
-    #print(sel2.support_)
-    #print(sel2.ranking_)
-    #rgr.fit(features_train_scaled, labels_train)
 
 #    clf.fit(features_train_scaled, labels_train)
 #    y_pred = clf.predict(features_test_scaled)
 #    print('accuracy w/ all features:', accuracy_score(labels_test, y_pred))
-    tuned_parameters = {'n_estimators': [20, 32, 256, 512, 1024],
-                        'max_depth': [2, 4, 5, 6, 7, 8, 10],
-                        'max_features': ['auto', 'sqrt'],
-                        'criterion': ['gini', 'entropy']}
+#    tuned_parameters = {'n_estimators': [20, 32, 256, 512, 1024],
+#                        'max_depth': [2, 4, 5, 6, 7, 8, 10],
+#                        'max_features': ['auto', 'sqrt'],
+#                        'criterion': ['gini', 'entropy']}
 #    clf = GridSearchCV(RandomForestClassifier(random_state=1),
 #                        tuned_parameters,
 #                        n_jobs=6,
@@ -164,11 +133,12 @@ if __name__ == '__main__':
 #                        cv=5)
     #clf.fit(features_train_scaled, labels_train)
 
+    # Store trained model for reuse
     #with open('models/rf.plk', 'wb') as file:
     #    joblib.dump(clf, file)
+
 #    print('Best score and parameters found on development set:')
 #    print('%0.3f for %r' % (clf.best_score_, clf.best_params_))
-    #Best score and parameters found on development set: 0.321 for {'criterion': 'entropy', 'max_depth': 4, 'max_features': 'auto', 'n_estimators': 32}
 
     #features_test_transformed = sel.transform(features_test_scaled)
     #features_test_scaled = sel2.transform(features_test_scaled)
@@ -187,16 +157,20 @@ if __name__ == '__main__':
                          columns=['class'])  # first column is the true class (buy, 1/ skip, 0)
     #y_pred = clf.predict(features_test_scaled)
 
+    # Reuse trained model
     with open('models/rf.plk', 'rb') as file:
         clf = joblib.load(file)
+
     y_pred = clf.predict(features_test_pred_meth)
     print('ypred:', y_pred)
     print(y_pred.shape)
     print(stock_names)
     print(stock_names.shape)
+
+    # Show names of stocks picked
     for stock_name, pred in zip(stock_names, y_pred):
         if pred == 1:
-            print(stock_name)
+            stock_name
     #print('stocks picked:', stock_names.iloc(axis=0)[[index for index in y_pred if index == 1], :])
     print('buy_pred/y_pred:', len(list(y for y in y_pred if y == 1)), '/', len(y_pred))
     #print(len(list(pred in y_pred for pred == 1)))
@@ -218,24 +192,6 @@ if __name__ == '__main__':
     print(sum_df)
 
     #print('accuracy after feat sel:', accuracy_score(labels_test_pred_meth, y_pred))
-
-#    # The coefficients
-#    print('Coefficients: \n', rgr.coef_)
-#    # The mean squared error
-#    print('Mean squared error: %.2f'
-#          % mean_squared_error(labels_test, y_pred))
-#    # The coefficient of determination: 1 is perfect prediction
-#    print('Coefficient of determination: %.2f'
-#          % r2_score(labels_test, y_pred))
-
-    # Plot outputs
-#    plt.scatter(features_test_scaled[:, 0], labels_test, color='black')
-#    plt.plot(features_test_scaled, y_pred, color='blue', linewidth=3)
-#
-#    plt.xticks(())
-#    plt.yticks(())
-#
-#    plt.show()
 
     # Make confusion matrix to track evaluation metrics
     cf_matrix = confusion_matrix(labels_test_pred_meth, y_pred)
@@ -271,7 +227,7 @@ if __name__ == '__main__':
     plt.yticks(range(features_train_scaled.shape[1]), features_train_scaled.columns)
     #plt.xlim([-1, features_train_transformed.shape[1]])
     plt.xlabel('Relative Importance')
-    #plt.show()
+    plt.show()
 
     # Print the feature ranking
     feature_importance_df = pd.DataFrame({'feature': features_train.columns, 'importance': clf.feature_importances_}).sort_values('importance', ascending=False)
@@ -294,5 +250,9 @@ if __name__ == '__main__':
 # [x]Try using aggregated dataset from year 2014-2018 and see if model improves
 # [x]Fine tune algorithm(tune parameters, missing data threshold) to boost ROI and beat S&P500(y2019 ~28%)
 # [x]Get Names of the true positive stocks
+# [x]See if k-fold method increases performance
+# [x]See if feature correlation heatmap works
+# [x]Decide whether to use fewer features for a better correlation heatmap
+# []Put feature names on corr heatmap axis, align axis
 # []Draft the capstone topic approval form
 
