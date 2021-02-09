@@ -1,5 +1,6 @@
 from functools import reduce
 
+import joblib
 import pandas as pd
 import matplotlib.pyplot as plt
 from pandas.tests.frame.methods.test_sort_values import ascending
@@ -25,7 +26,7 @@ if __name__ == '__main__':
             sd.rename({sd.columns[sd.columns.str.contains('price var', case=False)][0]: 'price var'}, axis=1, inplace=True)
     stocks_data = pd.concat(stocks_data_list)
     stocks_data.reset_index(drop=True, inplace=True)
-    print(stocks_data.shape)
+    #print(stocks_data.shape)
     stocks_data.to_csv('data/imputed_data.csv')
 
     stocks_data_test = pd.read_csv('data/2018_Financial_Data.csv')
@@ -42,7 +43,7 @@ if __name__ == '__main__':
     stocks_data.drop(columns=['Sector'], axis=1, inplace=True)
     stocks_data_test.drop(columns=['Sector'], axis=1, inplace=True)
     stocks_data.drop(stocks_data.columns[stocks_data.columns.str.contains('unnamed', case=False)], axis=1, inplace=True)
-    stocks_data_test.drop(stocks_data_test.columns[stocks_data_test.columns.str.contains('unnamed', case=False)], axis=1, inplace=True)
+    stock_names = stocks_data_test.pop(stocks_data_test.columns[stocks_data_test.columns.str.contains('unnamed', case=False)][0])
     stocks_data_test.rename({stocks_data_test.columns[stocks_data_test.columns.str.contains('price var', case=False)][0]: 'price var'}, axis=1, inplace=True)
     #print(stocks_data.columns)
     price_var_ = stocks_data.pop('price var')
@@ -54,16 +55,16 @@ if __name__ == '__main__':
     #labels = stocks_data.pop(stocks_data.columns[stocks_data.columns.str.contains('2015 price var', case=False)][0])
     #print(labels)
     #print(stocks_data)
-    threshold_percent = 11
+    threshold_percent = 33
     threshold = (threshold_percent / 100) * stocks_data.shape[0]
     stocks_data = stocks_data.loc[:, stocks_data.isin([0]).sum() <= threshold]
     stocks_data = stocks_data.loc[:, stocks_data.isna().sum() <= threshold]
-    print(stocks_data.shape)
+    #print(stocks_data.shape)
     features = stocks_data
 
-    threshold = (threshold_percent / 100) * stocks_data_test.shape[0]
-    stocks_data_test = stocks_data_test.loc[:, stocks_data_test.isin([0]).sum() <= threshold]
-    stocks_data_test = stocks_data_test.loc[:, stocks_data_test.isna().sum() <= threshold]
+#    threshold = (threshold_percent / 100) * stocks_data_test.shape[0]
+#    stocks_data_test = stocks_data_test.loc[:, stocks_data_test.isin([0]).sum() <= threshold]
+#    stocks_data_test = stocks_data_test.loc[:, stocks_data_test.isna().sum() <= threshold]
     features_test = stocks_data_test.loc[:, stocks_data.columns]
     print('stock_data_test shape:', features_test.shape)
 
@@ -100,19 +101,21 @@ if __name__ == '__main__':
         #print(train_indices)
         #print(labels_train)
         #print(labels_test)
-    features_train, features_test, labels_train, labels_test = train_test_split(imputed_features, labels, test_size=0.2, random_state=0)
+    #features_train, features_test, labels_train, labels_test = train_test_split(imputed_features, labels, test_size=0.2, random_state=0)
     #features_train = features_train.iloc[:, :]
     #features_test = features_test.iloc[:, :]
     #features_train = pd.DataFrame(features_train)
     #features_test = pd.DataFrame(features_test)
-    print('FEATURE_TEST INDEX:', features_test.index)
+    #print('FEATURE_TEST INDEX:', features_test.index)
     #print(features_train)
+    features_train = imputed_features
+    labels_train = labels
 
     # Standardize data
     scaler = StandardScaler()
     features_train_scaled = scaler.fit(features_train)
     features_train_scaled = scaler.transform(features_train)
-    features_test_scaled = scaler.transform(features_test)
+    #features_test_scaled = scaler.transform(features_test)
     features_test_pred_meth = scaler.fit_transform(imputed_features_test)
     #print('scaled data mean:', features_train_scaled.mean(axis=0))
     #print('scaled data std:', features_train_scaled.std(axis=0))
@@ -122,9 +125,9 @@ if __name__ == '__main__':
     #print('feat sel score:', sel.scores_)
     #features_train_transformed = sel.transform(features_train_scaled)
     features_train_scaled = pd.DataFrame(features_train_scaled)
-    features_test_scaled = pd.DataFrame(features_test_scaled)
+    #features_test_scaled = pd.DataFrame(features_test_scaled)
     features_test_pred_meth = pd.DataFrame(features_test_pred_meth)
-    print('FEATURE_TEST INDEX AFTER SCALING AND DATAFRAMING:', features_test_scaled.index)
+    #print('FEATURE_TEST INDEX AFTER SCALING AND DATAFRAMING:', features_test_scaled.index)
     #print(features_train_transformed, 'shape:', features_train_transformed.shape)
 
 
@@ -135,9 +138,8 @@ if __name__ == '__main__':
     #cmap = sns.diverging_palette(230, 20, as_cmap=True)
     #sns.heatmap(corr, mask=mask, cmap=cmap)
 
-
     # Train model with algorithm
-    clf = RandomForestClassifier(random_state=0, criterion='entropy', max_depth=4, max_features='auto', n_estimators=20)
+    #clf = RandomForestClassifier(random_state=0, criterion='entropy', max_depth=6, max_features='auto', n_estimators=128)
     #rgr = linear_model.LinearRegression()
     #rgr.fit(features_train_scaled, labels_train)
 
@@ -151,18 +153,21 @@ if __name__ == '__main__':
 #    clf.fit(features_train_scaled, labels_train)
 #    y_pred = clf.predict(features_test_scaled)
 #    print('accuracy w/ all features:', accuracy_score(labels_test, y_pred))
-    tuned_parameters = {'n_estimators': [32, 256, 512, 1024],
-                        'max_depth': [4, 5, 6, 7, 8],
+    tuned_parameters = {'n_estimators': [20, 32, 256, 512, 1024],
+                        'max_depth': [2, 4, 5, 6, 7, 8, 10],
                         'max_features': ['auto', 'sqrt'],
                         'criterion': ['gini', 'entropy']}
-    clf = GridSearchCV(RandomForestClassifier(random_state=1, criterion='entropy', max_features='auto', max_depth=4),
-                        tuned_parameters,
-                        n_jobs=6,
-                        scoring='average_precision',
-                        cv=5)
-    clf.fit(features_train_scaled, labels_train)
-    print('Best score and parameters found on development set:')
-    print('%0.3f for %r' % (clf.best_score_, clf.best_params_))
+#    clf = GridSearchCV(RandomForestClassifier(random_state=1),
+#                        tuned_parameters,
+#                        n_jobs=6,
+#                        scoring='average_precision',
+#                        cv=5)
+    #clf.fit(features_train_scaled, labels_train)
+
+    #with open('models/rf.plk', 'wb') as file:
+    #    joblib.dump(clf, file)
+#    print('Best score and parameters found on development set:')
+#    print('%0.3f for %r' % (clf.best_score_, clf.best_params_))
     #Best score and parameters found on development set: 0.321 for {'criterion': 'entropy', 'max_depth': 4, 'max_features': 'auto', 'n_estimators': 32}
 
     #features_test_transformed = sel.transform(features_test_scaled)
@@ -181,8 +186,18 @@ if __name__ == '__main__':
     pl_df = pd.DataFrame(np.array(labels_test_pred_meth), index=imputed_features_test.index.values,
                          columns=['class'])  # first column is the true class (buy, 1/ skip, 0)
     #y_pred = clf.predict(features_test_scaled)
+
+    with open('models/rf.plk', 'rb') as file:
+        clf = joblib.load(file)
     y_pred = clf.predict(features_test_pred_meth)
-    #print('ypred:', y_pred)
+    print('ypred:', y_pred)
+    print(y_pred.shape)
+    print(stock_names)
+    print(stock_names.shape)
+    for stock_name, pred in zip(stock_names, y_pred):
+        if pred == 1:
+            print(stock_name)
+    #print('stocks picked:', stock_names.iloc(axis=0)[[index for index in y_pred if index == 1], :])
     print('buy_pred/y_pred:', len(list(y for y in y_pred if y == 1)), '/', len(y_pred))
     #print(len(list(pred in y_pred for pred == 1)))
     buy_amount = init_invest_amount / len(list(y for y in y_pred if y == 1))
@@ -192,7 +207,7 @@ if __name__ == '__main__':
     pl_df['price var %'] = price_var_test['price var']
     pl_df['price var $'] = (price_var_test['price var'].values / 100) * pl_df['init invest amount']
     pl_df['final val'] = pl_df['init invest amount'] + pl_df['price var $']
-    print(pl_df)
+    #print(pl_df)
     #y_pred = rgr.predict(features_test_scaled)
 
     total_init_value_rf = pl_df['init invest amount'].sum()
@@ -202,8 +217,7 @@ if __name__ == '__main__':
     sum_df = pd.DataFrame([total_init_value_rf, total_final_value_rf, percent_gain_rf], index=['init val', 'final val', 'roi'], columns=['rf'])
     print(sum_df)
 
-
-    print('accuracy after feat sel:', accuracy_score(labels_test_pred_meth, y_pred))
+    #print('accuracy after feat sel:', accuracy_score(labels_test_pred_meth, y_pred))
 
 #    # The coefficients
 #    print('Coefficients: \n', rgr.coef_)
@@ -242,7 +256,7 @@ if __name__ == '__main__':
     plt.xlabel(sum_stats)
 
     # Classification report
-    print(classification_report(labels_test, clf.predict(features_test_scaled), target_names=['Skip', 'Buy']))
+    print(classification_report(labels_test_pred_meth, clf.predict(features_test_pred_meth), target_names=['Skip', 'Buy']))
 
    # plotting feature importance
     importances = clf.feature_importances_
@@ -257,11 +271,11 @@ if __name__ == '__main__':
     plt.yticks(range(features_train_scaled.shape[1]), features_train_scaled.columns)
     #plt.xlim([-1, features_train_transformed.shape[1]])
     plt.xlabel('Relative Importance')
-    plt.show()
+    #plt.show()
 
     # Print the feature ranking
     feature_importance_df = pd.DataFrame({'feature': features_train.columns, 'importance': clf.feature_importances_}).sort_values('importance', ascending=False)
-    print(feature_importance_df)
+    #print(feature_importance_df)
 
 
 
@@ -278,7 +292,7 @@ if __name__ == '__main__':
 # [x]Investigate class, price var % mismatch in pl_df (index f-d up during transformation, dataframing?)
 # [x]Fix buy/skip column of pl_df
 # [x]Try using aggregated dataset from year 2014-2018 and see if model improves
-# []Fine tune algorithm(tune parameters, missing data threshold) to boost ROI and beat S&P500(y2019 ~28%)
-# []Get Names of the true positive stocks
+# [x]Fine tune algorithm(tune parameters, missing data threshold) to boost ROI and beat S&P500(y2019 ~28%)
+# [x]Get Names of the true positive stocks
 # []Draft the capstone topic approval form
 
