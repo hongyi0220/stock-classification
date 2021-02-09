@@ -1,3 +1,5 @@
+from functools import reduce
+
 import pandas as pd
 import matplotlib.pyplot as plt
 from pandas.tests.frame.methods.test_sort_values import ascending
@@ -14,8 +16,19 @@ import seaborn as sns
 import numpy as np
 
 if __name__ == '__main__':
-    stocks_data = pd.read_csv('data/2018_Financial_Data.csv')
+    stocks_data1 = pd.read_csv('data/2014_Financial_Data.csv')
+    stocks_data2 = pd.read_csv('data/2015_Financial_Data.csv')
+    stocks_data3 = pd.read_csv('data/2016_Financial_Data.csv')
+    stocks_data4 = pd.read_csv('data/2017_Financial_Data.csv')
+    stocks_data_list = [stocks_data1, stocks_data2, stocks_data3, stocks_data4]
+    for sd in stocks_data_list:
+            sd.rename({sd.columns[sd.columns.str.contains('price var', case=False)][0]: 'price var'}, axis=1, inplace=True)
+    stocks_data = pd.concat(stocks_data_list)
+    stocks_data.reset_index(drop=True, inplace=True)
+    print(stocks_data.shape)
+    stocks_data.to_csv('data/imputed_data.csv')
 
+    stocks_data_test = pd.read_csv('data/2018_Financial_Data.csv')
 
     # Clean up data
 #    for i, row in stocks_data.iterrows():
@@ -25,38 +38,51 @@ if __name__ == '__main__':
 #            #print('class value changed')
 #            stocks_data.at[i, 'Class'] = 0
 
-
     #print(stocks_data)
     stocks_data.drop(columns=['Sector'], axis=1, inplace=True)
+    stocks_data_test.drop(columns=['Sector'], axis=1, inplace=True)
     stocks_data.drop(stocks_data.columns[stocks_data.columns.str.contains('unnamed', case=False)], axis=1, inplace=True)
-    stocks_data.rename({stocks_data.columns[stocks_data.columns.str.contains('price var', case=False)][0]: 'price var'}, axis=1, inplace=True)
+    stocks_data_test.drop(stocks_data_test.columns[stocks_data_test.columns.str.contains('unnamed', case=False)], axis=1, inplace=True)
+    stocks_data_test.rename({stocks_data_test.columns[stocks_data_test.columns.str.contains('price var', case=False)][0]: 'price var'}, axis=1, inplace=True)
     #print(stocks_data.columns)
-    price_var = stocks_data.pop('price var')
-
+    price_var_ = stocks_data.pop('price var')
+    price_var = stocks_data_test.pop('price var')
 
     #print('stock after dropping sector, unnamed, 2015 price var cols\n', stocks_data)
     labels = stocks_data.pop('Class')
+    labels_test_pred_meth = stocks_data_test.pop('Class')
     #labels = stocks_data.pop(stocks_data.columns[stocks_data.columns.str.contains('2015 price var', case=False)][0])
     #print(labels)
     #print(stocks_data)
     threshold_percent = 11
-    threshold = (threshold_percent / 100) * 3808
+    threshold = (threshold_percent / 100) * stocks_data.shape[0]
     stocks_data = stocks_data.loc[:, stocks_data.isin([0]).sum() <= threshold]
     stocks_data = stocks_data.loc[:, stocks_data.isna().sum() <= threshold]
-    #print(stocks_data.shape)
+    print(stocks_data.shape)
     features = stocks_data
+
+    threshold = (threshold_percent / 100) * stocks_data_test.shape[0]
+    stocks_data_test = stocks_data_test.loc[:, stocks_data_test.isin([0]).sum() <= threshold]
+    stocks_data_test = stocks_data_test.loc[:, stocks_data_test.isna().sum() <= threshold]
+    features_test = stocks_data_test.loc[:, stocks_data.columns]
+    print('stock_data_test shape:', features_test.shape)
 
     # Fill in missing values
     imp_mean = SimpleImputer(missing_values=np.nan, strategy='mean')
     imputed_features = imp_mean.fit_transform(features)
+    imputed_features_test = imp_mean.fit_transform(features_test)
+    imputed_features_test = pd.DataFrame(imputed_features_test)
 
     # Add headers back
     imputed_features = pd.DataFrame(imputed_features, columns=features.columns)
 
     # Remove columns with same data
     nunique = imputed_features.apply(pd.Series.nunique)
+    nunique_test = imputed_features_test.apply(pd.Series.nunique)
     cols_to_drop = nunique[nunique == 1].index
+    cols_to_drop_test = nunique_test[nunique_test == 1].index
     imputed_features.drop(cols_to_drop, axis=1, inplace=True)
+    imputed_features_test.drop(cols_to_drop_test, axis=1, inplace=True)
     #print('after:', imputed_features.shape)
 
     # Export data to csv file
@@ -87,6 +113,7 @@ if __name__ == '__main__':
     features_train_scaled = scaler.fit(features_train)
     features_train_scaled = scaler.transform(features_train)
     features_test_scaled = scaler.transform(features_test)
+    features_test_pred_meth = scaler.fit_transform(imputed_features_test)
     #print('scaled data mean:', features_train_scaled.mean(axis=0))
     #print('scaled data std:', features_train_scaled.std(axis=0))
 
@@ -96,6 +123,7 @@ if __name__ == '__main__':
     #features_train_transformed = sel.transform(features_train_scaled)
     features_train_scaled = pd.DataFrame(features_train_scaled)
     features_test_scaled = pd.DataFrame(features_test_scaled)
+    features_test_pred_meth = pd.DataFrame(features_test_pred_meth)
     print('FEATURE_TEST INDEX AFTER SCALING AND DATAFRAMING:', features_test_scaled.index)
     #print(features_train_transformed, 'shape:', features_train_transformed.shape)
 
@@ -120,21 +148,21 @@ if __name__ == '__main__':
     #print(sel2.ranking_)
     #rgr.fit(features_train_scaled, labels_train)
 
-    clf.fit(features_train_scaled, labels_train)
+#    clf.fit(features_train_scaled, labels_train)
 #    y_pred = clf.predict(features_test_scaled)
 #    print('accuracy w/ all features:', accuracy_score(labels_test, y_pred))
-    tuned_parameters = {'n_estimators': [32, 256, 512, 1024]}
-                        #'max_depth': [4, 5, 6, 7, 8]}
-                        #'max_features': ['auto', 'sqrt'],
-                        #'criterion': ['gini', 'entropy']}
-    #clf = GridSearchCV(RandomForestClassifier(random_state=1, criterion='entropy', max_features='auto', max_depth=4),
-#                        tuned_parameters,
-#                        n_jobs=6,
-#                        scoring='average_precision',
-#                        cv=5)
-    #clf.fit(features_train_scaled, labels_train)
-    #print('Best score and parameters found on development set:')
-    #print('%0.3f for %r' % (clf.best_score_, clf.best_params_))
+    tuned_parameters = {'n_estimators': [32, 256, 512, 1024],
+                        'max_depth': [4, 5, 6, 7, 8],
+                        'max_features': ['auto', 'sqrt'],
+                        'criterion': ['gini', 'entropy']}
+    clf = GridSearchCV(RandomForestClassifier(random_state=1, criterion='entropy', max_features='auto', max_depth=4),
+                        tuned_parameters,
+                        n_jobs=6,
+                        scoring='average_precision',
+                        cv=5)
+    clf.fit(features_train_scaled, labels_train)
+    print('Best score and parameters found on development set:')
+    print('%0.3f for %r' % (clf.best_score_, clf.best_params_))
     #Best score and parameters found on development set: 0.321 for {'criterion': 'entropy', 'max_depth': 4, 'max_features': 'auto', 'n_estimators': 32}
 
     #features_test_transformed = sel.transform(features_test_scaled)
@@ -143,13 +171,17 @@ if __name__ == '__main__':
     # Get 2019 price variations ONLY for the stocks in testing split
     init_invest_amount = 1000
     #print(features_test_scaled.index.values)
-    price_var_test = price_var.loc[features_test.index.values]
+    #price_var_test = price_var.loc[features_test.index.values]
+    price_var_test = price_var.loc[imputed_features_test.index.values]
     price_var_test = pd.DataFrame(price_var_test)
     #print(price_var_test.shape)
     #print('LABELS_TEST:', labels_test)
-    pl_df = pd.DataFrame(np.array(labels_test), index=features_test.index.values,
-                       columns=['class'])  # first column is the true class (buy, 1/ skip, 0)
-    y_pred = clf.predict(features_test_scaled)
+#    pl_df = pd.DataFrame(np.array(labels_test), index=features_test.index.values,
+#                       columns=['class'])  # first column is the true class (buy, 1/ skip, 0)
+    pl_df = pd.DataFrame(np.array(labels_test_pred_meth), index=imputed_features_test.index.values,
+                         columns=['class'])  # first column is the true class (buy, 1/ skip, 0)
+    #y_pred = clf.predict(features_test_scaled)
+    y_pred = clf.predict(features_test_pred_meth)
     #print('ypred:', y_pred)
     print('buy_pred/y_pred:', len(list(y for y in y_pred if y == 1)), '/', len(y_pred))
     #print(len(list(pred in y_pred for pred == 1)))
@@ -171,7 +203,7 @@ if __name__ == '__main__':
     print(sum_df)
 
 
-    print('accuracy after feat sel:', accuracy_score(labels_test, y_pred))
+    print('accuracy after feat sel:', accuracy_score(labels_test_pred_meth, y_pred))
 
 #    # The coefficients
 #    print('Coefficients: \n', rgr.coef_)
@@ -192,7 +224,7 @@ if __name__ == '__main__':
 #    plt.show()
 
     # Make confusion matrix to track evaluation metrics
-    cf_matrix = confusion_matrix(labels_test, y_pred)
+    cf_matrix = confusion_matrix(labels_test_pred_meth, y_pred)
     print(cf_matrix)
     cell_names = ['True Neg', 'False Pos', 'False Neg', 'True Pos']
     cell_counts = ["{0:0f}".format(v) for v in cf_matrix.flatten()]
@@ -245,7 +277,7 @@ if __name__ == '__main__':
 # [x]Calculate price var based on a fixed amount investment divided equally into winning picks
 # [x]Investigate class, price var % mismatch in pl_df (index f-d up during transformation, dataframing?)
 # [x]Fix buy/skip column of pl_df
-# []Try using aggregated dataset from year 2014-2018 and see if model improves
+# [x]Try using aggregated dataset from year 2014-2018 and see if model improves
 # []Fine tune algorithm(tune parameters, missing data threshold) to boost ROI and beat S&P500(y2019 ~28%)
 # []Get Names of the true positive stocks
 # []Draft the capstone topic approval form
