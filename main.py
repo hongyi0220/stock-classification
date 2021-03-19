@@ -1,9 +1,13 @@
 from flask import Flask, send_file
 from flask_restful import Resource, Api
 from ml import do_ml
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)
 api = Api(app)
+
+bytes_obj = do_ml()
 
 
 class Prediction(Resource):
@@ -15,19 +19,26 @@ class Prediction(Resource):
 
 class Dashboard(Resource):
     def get(self):
-        bytes_obj = do_ml()
-
-        return send_file(bytes_obj,
-                         attachment_filename='plot.png',
+        return send_file('plots/corr_heatmap.png',
+                         attachment_filename='corr_heatmap.png',
                          mimetype='image/png')
 
+class Importance(Resource):
+    def get(self):
+        return send_file('plots/feature_importance.png',
+                         attachment_filename='feature_importance.png',
+                         mimetype='image/png')
 
+class Matrix(Resource):
+    def get(self):
+        return send_file('plots/confusion_matrix.png',
+                         attachment_filename='confusion_matrix.png',
+                         mimetype='image/png')
 
 api.add_resource(Prediction, '/prediction')
-api.add_resource(Dashboard,
-                 '/dashboard',
-                 '/dashboard/feature-importance',
-                 '/dashboard/confusion-matrix')
+api.add_resource(Importance, '/dashboard/feature-importance')
+api.add_resource(Matrix, '/dashboard/confusion-matrix')
+api.add_resource(Dashboard, '/dashboard')
 
 if __name__ == '__main__':
     app.run(debug=True)

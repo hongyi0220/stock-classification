@@ -101,11 +101,10 @@ def do_ml():
     cmap = sns.diverging_palette(230, 20, as_cmap=True)
     sns.heatmap(corr, mask=mask, cmap=cmap)
 
-    bytes_image = io.BytesIO()
-    plt.savefig(bytes_image, format='png')
-    bytes_image.seek(0)
-
-    plt.show()
+    #bytes_image = io.BytesIO()
+    #plt.savefig(bytes_image, format='png')
+    plt.savefig('./plots/corr_heatmap.png')
+    #bytes_image.seek(0)
 
     # Train model with algorithm
     # clf = RandomForestClassifier(random_state=0, criterion='entropy', max_depth=6, max_features='auto', n_estimators=128)
@@ -203,6 +202,7 @@ def do_ml():
     sum_stats = "\nAccuracy:{:0.2f}\nRecall={:0.2f}\nPrecision={:0.2f}\nF1 Score={:0.2f}".format(accuracy, recall,
                                                                                                  precision, f1score)
     plt.xlabel(sum_stats)
+    plt.savefig('./plots/confusion_matrix.png')
 
     # Classification report
     print(classification_report(labels_test_pred_meth, clf.predict(features_test_pred_meth),
@@ -221,6 +221,7 @@ def do_ml():
     plt.yticks(range(features_train_scaled.shape[1]), features_train_scaled.columns)
     # plt.xlim([-1, features_train_transformed.shape[1]])
     plt.xlabel('Relative Importance')
+    plt.savefig('./plots/feature_importance.png')
     plt.show()
 
     # Print the feature ranking
@@ -228,8 +229,3 @@ def do_ml():
         {'feature': features_train.columns, 'importance': clf.feature_importances_}).sort_values('importance',
                                                                                                  ascending=False)
     # print(feature_importance_df)
-
-    return {
-        'corr_map': bytes_image,
-
-    }
