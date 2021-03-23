@@ -229,3 +229,7 @@ def do_ml():
         {'feature': features_train.columns, 'importance': clf.feature_importances_}).sort_values('importance',
                                                                                                  ascending=False)
     # print(feature_importance_df)
+
+    #TODO:
+    #   []line 161: zip stock names and y_pred, send it over upon get request
+    #   []Clean up code

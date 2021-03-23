@@ -16,8 +16,11 @@ class Prediction(Resource):
 
         }
 
-
 class Dashboard(Resource):
+    def get(self):
+        return 'Welcome to Dashboard!'
+
+class Correlation(Resource):
     def get(self):
         return send_file('plots/corr_heatmap.png',
                          attachment_filename='corr_heatmap.png',
@@ -36,9 +39,10 @@ class Matrix(Resource):
                          mimetype='image/png')
 
 api.add_resource(Prediction, '/prediction')
+api.add_resource(Dashboard, '/dashboard')
 api.add_resource(Importance, '/dashboard/feature-importance')
 api.add_resource(Matrix, '/dashboard/confusion-matrix')
-api.add_resource(Dashboard, '/dashboard')
+api.add_resource(Correlation, '/dashboard/correlation-heatmap')
 
 if __name__ == '__main__':
     app.run(debug=True)
