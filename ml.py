@@ -6,6 +6,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.impute import SimpleImputer
 import seaborn as sns
 import numpy as np
+import json
 import io
 
 def do_ml():
@@ -151,9 +152,10 @@ def do_ml():
     with open('rf.plk', 'rb') as file:
         clf = joblib.load(file)
 
-    y_pred = clf.predict(features_test_pred_meth)
+    y_pred: object = clf.predict(features_test_pred_meth)
     print('ypred:', y_pred)
     print(y_pred.shape)
+    print('ypred type:', type(y_pred[0]))
     print(stock_names)
     print(stock_names.shape)
 
@@ -161,6 +163,12 @@ def do_ml():
     for stock_name, pred in zip(stock_names, y_pred):
         if pred == 1:
             stock_name
+
+    y_pred_int = [int(y) for y in y_pred]
+    print('y_pred_int length:', len(y_pred_int))
+    with open('./data/stock_picks.json', 'w') as f:
+        json.dump(dict(zip(stock_names, y_pred_int)), f)
+
     # print('stocks picked:', stock_names.iloc(axis=0)[[index for index in y_pred if index == 1], :])
     print('buy_pred/y_pred:', len(list(y for y in y_pred if y == 1)), '/', len(y_pred))
     # print(len(list(pred in y_pred for pred == 1)))
@@ -231,5 +239,5 @@ def do_ml():
     # print(feature_importance_df)
 
     #TODO:
-    #   []line 161: zip stock names and y_pred, send it over upon get request
+    #   [x]line 161: zip stock names and y_pred, send it over upon get request
     #   []Clean up code

@@ -2,6 +2,7 @@ from flask import Flask, send_file
 from flask_restful import Resource, Api
 from ml import do_ml
 from flask_cors import CORS
+import json
 
 app = Flask(__name__)
 CORS(app)
@@ -12,13 +13,9 @@ bytes_obj = do_ml()
 
 class Prediction(Resource):
     def get(self):
-        return {
-
-        }
-
-class Dashboard(Resource):
-    def get(self):
-        return 'Welcome to Dashboard!'
+        with open('./data/stock_picks.json', 'r') as f:
+            stock_picks = json.load(f)
+            return stock_picks
 
 class Correlation(Resource):
     def get(self):
@@ -39,7 +36,6 @@ class Matrix(Resource):
                          mimetype='image/png')
 
 api.add_resource(Prediction, '/prediction')
-api.add_resource(Dashboard, '/dashboard')
 api.add_resource(Importance, '/dashboard/feature-importance')
 api.add_resource(Matrix, '/dashboard/confusion-matrix')
 api.add_resource(Correlation, '/dashboard/correlation-heatmap')
@@ -67,4 +63,4 @@ if __name__ == '__main__':
 #   [x]Decide whether to use fewer features for a better correlation heatmap
 #   []Put feature names on corr heatmap axis, align axis
 #   [x]Draft the capstone topic approval form
-#   []Create stock-ml api with flask
+#   [x]Create stock-ml api with flask
